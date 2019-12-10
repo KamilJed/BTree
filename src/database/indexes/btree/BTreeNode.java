@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 public class BTreeNode {
-    public static final int D = 5;
+    public static final int D = 2;
     private int firstChildAddress;
     private int parentPageAddress;
     private int recordsNumber;
@@ -72,7 +72,7 @@ public class BTreeNode {
             bTree.saveNode(this);
         }
         else{
-            boolean compansated = compensation();
+            boolean compansated = compensation(newRecord);
             if(!compansated){
                 try{
                     split(newRecord);
@@ -111,30 +111,48 @@ public class BTreeNode {
         return builder.toString();
     }
 
-    private boolean compensation(){
+    private boolean compensation(BTreeRecord r){
         Pair<BTreeNode, BTreeRecord> siblingAndRecord = getFreeSibling();
         if(siblingAndRecord != null){
             ArrayList<BTreeRecord> compensationArray = new ArrayList<>();
             compensationArray.addAll(records);
             compensationArray.add(siblingAndRecord.getValue());
+            compensationArray.add(r);
             compensationArray.addAll(siblingAndRecord.getKey().records);
             Collections.sort(compensationArray);
+            ArrayList<BTreeRecord> smaller, bigger;
+            if(records.get(0).getIndex() < siblingAndRecord.getValue().getIndex()){
+                smaller = records;
+                bigger = siblingAndRecord.getKey().records;
+            }
+            else{
+                smaller = siblingAndRecord.getKey().records;
+                bigger = records;
+            }
             records.clear();
             siblingAndRecord.getKey().records.clear();
             int i = 0;
-            for(; i < compensationArray.size()/2 - 1; i++)
-                records.add(compensationArray.get(i));
+            for(; i < compensationArray.size()/2; i++)
+                smaller.add(compensationArray.get(i));
             try{
                 BTreeRecord middleRecord = compensationArray.get(i++);
                 int address = siblingAndRecord.getValue().getChildPageAddress();
                 BTreeNode parent = bTree.getNode(parentPageAddress);
+                if(this.records == smaller){
+                    siblingAndRecord.getValue().setChildPageAddress(siblingAndRecord.getKey().firstChildAddress);
+                    siblingAndRecord.getKey().firstChildAddress = middleRecord.getChildPageAddress();
+                    middleRecord.setChildPageAddress(address);
+                }
+                else{
+                    siblingAndRecord.getValue().setChildPageAddress(this.firstChildAddress);
+                    this.firstChildAddress = middleRecord.getChildPageAddress();
+                    middleRecord.setChildPageAddress(address);
+                }
                 parent.records.removeIf(record -> record.getIndex() == siblingAndRecord.getValue().getIndex());
-                siblingAndRecord.getValue().setChildPageAddress(middleRecord.getChildPageAddress());
-                middleRecord.setChildPageAddress(address);
                 parent.records.add(middleRecord);
                 Collections.sort(parent.records);
                 for(; i < compensationArray.size(); i++)
-                    siblingAndRecord.getKey().records.add(compensationArray.get(i));
+                    bigger.add(compensationArray.get(i));
                 parent.recordsNumber = parent.records.size();
                 siblingAndRecord.getKey().recordsNumber = siblingAndRecord.getKey().records.size();
                 this.recordsNumber = this.records.size();
@@ -166,6 +184,7 @@ public class BTreeNode {
         BTreeRecord middleRecord = records.get(records.size() - 1);
         records.remove(middleRecord);
         recordsNumber = records.size();
+        newNode.firstChildAddress = middleRecord.getChildPageAddress();
         middleRecord.setChildPageAddress(newNode.selfAddress);
         newNode.updateChilds();
         bTree.saveNode(newNode);
@@ -190,13 +209,18 @@ public class BTreeNode {
 
     private void updateChilds(){
         try{
-            BTreeNode node = bTree.getNode(firstChildAddress);
-            node.parentPageAddress = selfAddress;
-            bTree.saveNode(node);
-            for(BTreeRecord record : records){
-                node = bTree.getNode(record.getChildPageAddress());
+            BTreeNode node;
+            if(firstChildAddress != 0) {
+                node = bTree.getNode(firstChildAddress);
                 node.parentPageAddress = selfAddress;
                 bTree.saveNode(node);
+            }
+            for(BTreeRecord record : records){
+                if(record.getChildPageAddress() != 0){
+                    node = bTree.getNode(record.getChildPageAddress());
+                    node.parentPageAddress = selfAddress;
+                    bTree.saveNode(node);
+                }
             }
         }
         catch (IOException e){

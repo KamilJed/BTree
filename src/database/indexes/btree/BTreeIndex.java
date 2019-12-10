@@ -95,6 +95,7 @@ public class BTreeIndex {
             int rootAddress = accessFile.readInt();
             accessFile.close();
             printTree(0, rootAddress);
+            System.out.println("--------------------------");
         }
         catch (IOException e){
             e.printStackTrace();
