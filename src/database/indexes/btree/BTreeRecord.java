@@ -51,5 +51,10 @@ public class BTreeRecord implements Comparable<BTreeRecord> {
     public void setChildPageAddress(int childPageAddress) {
         this.childPageAddress = childPageAddress;
     }
+
+    @Override
+    public String toString() {
+        return Integer.toUnsignedString(index);
+    }
 }
 

@@ -1,117 +1,46 @@
 import database.DataBase;
 import database.indexes.btree.BTreeIndex;
+import database.indexes.btree.BTreeRecord;
 
 import java.io.IOException;
+import java.util.Random;
+import java.util.Scanner;
 
 public class mainClass {
 
     public static void main(String[] args) {
         try{
             BTreeIndex index = new BTreeIndex("index");
-            index.insertRecord(1, 1221);
-            index.print();
-            index.insertRecord(2, 1221);
-            index.print();
-            index.insertRecord(3, 1221);
-            index.print();
-            index.insertRecord(17, 1221);
-            index.print();
-            index.insertRecord(18, 1221);
-            index.print();
-            index.insertRecord(19, 1221);
-            index.print();
-            index.insertRecord(20, 1221);
-            index.print();
-            index.insertRecord(21, 1221);
-            index.print();
-            index.insertRecord(22, 1221);
-            index.print();
-            index.insertRecord(23, 1221);
-            index.print();
-            index.insertRecord(24, 1221);
-            index.print();
-            index.insertRecord(25, 1221);
-            index.print();
-            index.insertRecord(26, 1221);
-            index.print();
-            index.insertRecord(4, 1221);
-            index.print();
-            index.insertRecord(5, 1221);
-            index.print();
-            index.insertRecord(6, 1221);
-            index.print();
-            index.insertRecord(7, 1221);
-            index.print();
-            index.insertRecord(8, 1221);
-            index.print();
-            index.insertRecord(9, 1221);
-            index.print();
-            index.insertRecord(10, 1221);
-            index.print();
-            index.insertRecord(11, 1221);
-            index.print();
-            index.insertRecord(12, 1221);
-            index.print();
-            index.insertRecord(13, 1221);
-            index.print();
-            index.insertRecord(14, 1221);
-            index.print();
-            index.insertRecord(34, 1221);
-            index.print();
-            index.insertRecord(43, 1221);
-            index.print();
-            index.insertRecord(44, 1221);
-            index.print();
-            index.insertRecord(45, 1221);
-            index.print();
-            index.insertRecord(46, 1221);
-            index.print();
-            index.insertRecord(15, 1221);
-            index.print();
-            index.insertRecord(16, 1221);
-            index.print();
-            index.insertRecord(35, 1221);
-            index.print();
-            index.insertRecord(36, 1221);
-            index.print();
-            index.insertRecord(37, 1221);
-            index.print();
-            index.insertRecord(38, 1221);
-            index.print();
-            index.insertRecord(39, 1221);
-            index.print();
-            index.insertRecord(40, 1221);
-            index.print();
-            index.insertRecord(41, 1221);
-            index.print();
-            index.insertRecord(42, 1221);
-            index.print();
-            index.insertRecord(27, 1221);
-            index.print();
-            index.insertRecord(28, 1221);
-            index.print();
-            index.insertRecord(29, 1221);
-            index.print();
-            index.insertRecord(30, 1221);
-            index.print();
-            index.insertRecord(31, 1221);
-            index.print();
-            index.insertRecord(32, 1221);
-            index.print();
-            index.insertRecord(33, 1221);
-            index.print();
-            index.insertRecord(47, 1221);
-            index.print();
-            index.insertRecord(48, 1221);
-            index.print();
-            index.insertRecord(49, 1221);
-            index.print();
-            index.insertRecord(50, 1221);
-            index.print();
-            index.insertRecord(51, 1221);
-            index.print();
-            index.insertRecord(52, 1221);
-            index.print();
+            for(int i = 0; i < 25; i++){
+                Random r = new Random();
+                index.insertRecord(r.nextInt(1000), 10);
+            }
+            while(true){
+                Scanner scanner = new Scanner(System.in);
+                String command = scanner.nextLine();
+                int id, newId;
+                switch (command.charAt(0)){
+                    case 'a':
+                        id = Integer.parseInt(command.split(" ")[1]);
+                        index.insertRecord(id, 9);
+                        break;
+                    case 'd':
+                        id = Integer.parseInt(command.split(" ")[1]);
+                        index.deleteRecord(id);
+                        break;
+                    case 'u':
+                        id = Integer.parseInt(command.split(" ")[1]);
+                        newId = Integer.parseInt(command.split(" ")[2]);
+                        index.updateRecord(id, newId);
+                        break;
+                    case 'p':
+                        index.print();
+                        break;
+                    case 's':
+                        index.printSorted();
+                        break;
+                }
+            }
         }
         catch(IOException e){
             e.printStackTrace();

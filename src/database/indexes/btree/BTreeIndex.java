@@ -41,8 +41,27 @@ public class BTreeIndex {
 
     public boolean insertRecord(int index, int address){
         BTreeNode node = searchRecordNode(index);
+        if(node.search(index) != null)
+            return false;
         BTreeRecord newRecord = new BTreeRecord(index, address, 0);
         node.insert(newRecord);
+        return true;
+    }
+
+    public boolean deleteRecord(int index){
+        BTreeNode node = searchRecordNode(index);
+        if(node.search(index) == null)
+            return false;
+        node.delete(index);
+        return true;
+    }
+
+    public boolean updateRecord(int index, int newIndex){
+        BTreeRecord record = searchRecord(index);
+        if(record == null)
+            return false;
+        deleteRecord(index);
+        insertRecord(newIndex, record.getRecordAddress());
         return true;
     }
 
@@ -96,6 +115,36 @@ public class BTreeIndex {
             accessFile.close();
             printTree(0, rootAddress);
             System.out.println("--------------------------");
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    public void printSorted(){
+        try{
+            RandomAccessFile accessFile = new RandomAccessFile(indexFile, "r");
+            accessFile.seek(0);
+            int rootAddress = accessFile.readInt();
+            accessFile.close();
+            printSortedTree(rootAddress);
+            System.out.println("--------------------------");
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    private void printSortedTree(int address){
+        try{
+            BTreeNode node = getNode(address);
+            if(node.getFirstChildAddress() != 0)
+                printSortedTree(node.getFirstChildAddress());
+            for(BTreeRecord record : node.getRecords()){
+                System.out.println(record);
+                if(record.getChildPageAddress() != 0)
+                    printSortedTree(record.getChildPageAddress());
+            }
         }
         catch (IOException e){
             e.printStackTrace();

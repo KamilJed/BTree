@@ -11,6 +11,9 @@ import java.util.Optional;
 
 public class BTreeNode {
     public static final int D = 2;
+    private static final int SIBLING_INSERT = 0;
+    private static final int SIBLING_DELETE = 1;
+    private static final int SIBLING_MERGE = 2;
     private int firstChildAddress;
     private int parentPageAddress;
     private int recordsNumber;
@@ -72,7 +75,7 @@ public class BTreeNode {
             bTree.saveNode(this);
         }
         else{
-            boolean compansated = compensation(newRecord);
+            boolean compansated = compensation(newRecord, BTreeNode.SIBLING_INSERT);
             if(!compansated){
                 try{
                     split(newRecord);
@@ -81,6 +84,29 @@ public class BTreeNode {
                     System.out.println("ERROR! Couldn't split page");
                 }
             }
+        }
+    }
+
+    public void delete(int index) throws NullPointerException{
+        if(firstChildAddress == 0){
+            records.remove(search(index));
+            recordsNumber--;
+            afterDel();
+        }
+        else{
+            BTreeRecord toDelRecord = search(index);
+            BTreeNode minNode = getSuccecessor(toDelRecord.getChildPageAddress());
+            if(minNode == null)
+                throw new NullPointerException("ERROR! Couldn't get min node");
+            BTreeRecord successor = minNode.records.get(0);
+            records.remove(toDelRecord);
+            successor.setChildPageAddress(toDelRecord.getChildPageAddress());
+            records.add(successor);
+            Collections.sort(records);
+            minNode.records.remove(successor);
+            minNode.recordsNumber--;
+            bTree.saveNode(this);
+            minNode.afterDel();
         }
     }
 
@@ -105,19 +131,45 @@ public class BTreeNode {
         StringBuilder builder = new StringBuilder();
         builder.append(".");
         for(BTreeRecord record : records){
-            builder.append(record.getIndex());
+            builder.append(record);
             builder.append(".");
         }
         return builder.toString();
     }
 
-    private boolean compensation(BTreeRecord r){
-        Pair<BTreeNode, BTreeRecord> siblingAndRecord = getFreeSibling();
+    private BTreeNode getSuccecessor(int address){
+        try{
+            BTreeNode minNode = bTree.getNode(address);
+            while(minNode.firstChildAddress != 0)
+                minNode = bTree.getNode(minNode.firstChildAddress);
+            return minNode;
+        }
+        catch (IOException e){
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private void afterDel(){
+        if(recordsNumber < BTreeNode.D && parentPageAddress != 0){
+            boolean compansated = compensation(null, BTreeNode.SIBLING_DELETE);
+            if(!compansated){
+                merge();
+            }
+        }
+        else
+            bTree.saveNode(this);
+    }
+
+    private boolean compensation(BTreeRecord r, int mode){
+        Pair<BTreeNode, BTreeRecord> siblingAndRecord = getFreeSibling(mode);
+
         if(siblingAndRecord != null){
             ArrayList<BTreeRecord> compensationArray = new ArrayList<>();
             compensationArray.addAll(records);
             compensationArray.add(siblingAndRecord.getValue());
-            compensationArray.add(r);
+            if(r != null)
+                compensationArray.add(r);
             compensationArray.addAll(siblingAndRecord.getKey().records);
             Collections.sort(compensationArray);
             ArrayList<BTreeRecord> smaller, bigger;
@@ -168,6 +220,44 @@ public class BTreeNode {
         }
         else
             return false;
+    }
+
+    private void merge(){
+        Pair<BTreeNode, BTreeRecord> siblingAndRecord = getFreeSibling(BTreeNode.SIBLING_MERGE);
+        BTreeNode smaller, bigger;
+        if(records.get(0).getIndex() < siblingAndRecord.getValue().getIndex()){
+            smaller = this;
+            bigger = siblingAndRecord.getKey();
+        }
+        else{
+            smaller = siblingAndRecord.getKey();
+            bigger = this;
+        }
+        smaller.records.addAll(bigger.records);
+        siblingAndRecord.getValue().setChildPageAddress(bigger.firstChildAddress);
+        smaller.records.add(siblingAndRecord.getValue());
+        Collections.sort(smaller.records);
+        try{
+            BTreeNode parent = bTree.getNode(parentPageAddress);
+            parent.records.removeIf(record -> record.getIndex() == siblingAndRecord.getValue().getIndex());
+            parent.recordsNumber--;
+            bigger.deletePage();
+            if(parent.parentPageAddress == 0 && parent.recordsNumber == 0){
+                smaller.parentPageAddress = 0;
+                smaller.recordsNumber = smaller.records.size();
+                bTree.saveNode(smaller);
+                parent.deletePage();
+            }
+            else{
+                smaller.recordsNumber = smaller.records.size();
+                bTree.saveNode(smaller);
+                parent.recordsNumber = parent.records.size();
+                parent.afterDel();
+            }
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
     }
 
     private void split(BTreeRecord r) throws IOException{
@@ -228,7 +318,17 @@ public class BTreeNode {
         }
     }
 
-    private Pair<BTreeNode, BTreeRecord> getFreeSibling(){
+    private void deletePage(){
+        parentPageAddress = -1;
+        firstChildAddress = -1;
+        recordsNumber = -1;
+        records.clear();
+        for(int i = 0; i < 2*BTreeNode.D; i++)
+            records.add(new BTreeRecord(-1, -1, -1));
+        bTree.saveNode(this);
+    }
+
+    private Pair<BTreeNode, BTreeRecord> getFreeSibling(int mode){
         if(parentPageAddress == 0)
             return null;
         try{
@@ -236,7 +336,11 @@ public class BTreeNode {
             if(selfAddress == parent.firstChildAddress){
                 if(parent.records.get(0).getChildPageAddress() != 0){
                     BTreeNode sibling = bTree.getNode(parent.records.get(0).getChildPageAddress());
-                    if(sibling.recordsNumber < 2*BTreeNode.D)
+                    if(mode == BTreeNode.SIBLING_INSERT && sibling.recordsNumber < 2*BTreeNode.D)
+                        return new Pair<>(sibling, parent.records.get(0));
+                    else if(mode == BTreeNode.SIBLING_DELETE && sibling.recordsNumber > BTreeNode.D)
+                        return new Pair<>(sibling, parent.records.get(0));
+                    else if(mode == BTreeNode.SIBLING_MERGE)
                         return new Pair<>(sibling, parent.records.get(0));
                 }
             }
@@ -246,7 +350,11 @@ public class BTreeNode {
                     sibling = bTree.getNode(parent.firstChildAddress);
                 else
                     sibling = bTree.getNode(parent.records.get(parent.records.size() - 2).getChildPageAddress());
-                if(sibling.recordsNumber < 2*BTreeNode.D)
+                if(mode == BTreeNode.SIBLING_INSERT && sibling.recordsNumber < 2*BTreeNode.D)
+                    return new Pair<>(sibling, parent.records.get(parent.records.size() - 1));
+                else if(mode == BTreeNode.SIBLING_DELETE && sibling.recordsNumber > BTreeNode.D)
+                    return new Pair<>(sibling, parent.records.get(parent.records.size() - 1));
+                else if(mode == BTreeNode.SIBLING_MERGE)
                     return new Pair<>(sibling, parent.records.get(parent.records.size() - 1));
             }
             int index = records.get(0).getIndex();
@@ -255,17 +363,29 @@ public class BTreeNode {
                     BTreeNode sibling;
                     if(i == 0){
                         sibling = bTree.getNode(parent.firstChildAddress);
-                        if(sibling.recordsNumber < 2*BTreeNode.D)
+                        if(mode == BTreeNode.SIBLING_INSERT && sibling.recordsNumber < 2*BTreeNode.D)
+                            return new Pair<>(sibling, parent.records.get(0));
+                        else if(mode == BTreeNode.SIBLING_DELETE && sibling.recordsNumber > BTreeNode.D)
+                            return new Pair<>(sibling, parent.records.get(0));
+                        else if(mode == BTreeNode.SIBLING_MERGE)
                             return new Pair<>(sibling, parent.records.get(0));
                     }
                     else{
                         sibling = bTree.getNode(parent.records.get(i - 1).getChildPageAddress());
-                        if(sibling.recordsNumber < 2*BTreeNode.D)
+                        if(mode == BTreeNode.SIBLING_INSERT && sibling.recordsNumber < 2*BTreeNode.D)
+                            return new Pair<>(sibling, parent.records.get(i));
+                        else if(mode == BTreeNode.SIBLING_DELETE && sibling.recordsNumber > BTreeNode.D)
+                            return new Pair<>(sibling, parent.records.get(i));
+                        else if(mode == BTreeNode.SIBLING_MERGE)
                             return new Pair<>(sibling, parent.records.get(i));
                     }
 
                     sibling = bTree.getNode(parent.records.get(i + 1).getChildPageAddress());
-                    if(sibling.recordsNumber < 2*BTreeNode.D)
+                    if(mode == BTreeNode.SIBLING_INSERT && sibling.recordsNumber < 2*BTreeNode.D)
+                        return new Pair<>(sibling, parent.records.get(i + 1));
+                    else if(mode == BTreeNode.SIBLING_DELETE && sibling.recordsNumber > BTreeNode.D)
+                        return new Pair<>(sibling, parent.records.get(i + 1));
+                    else if(mode == BTreeNode.SIBLING_MERGE)
                         return new Pair<>(sibling, parent.records.get(i + 1));
                 }
             }
