@@ -255,12 +255,14 @@ public class BTreeNode {
                     BTreeNode sibling;
                     if(i == 0){
                         sibling = bTree.getNode(parent.firstChildAddress);
+                        if(sibling.recordsNumber < 2*BTreeNode.D)
+                            return new Pair<>(sibling, parent.records.get(0));
                     }
                     else{
                         sibling = bTree.getNode(parent.records.get(i - 1).getChildPageAddress());
+                        if(sibling.recordsNumber < 2*BTreeNode.D)
+                            return new Pair<>(sibling, parent.records.get(i));
                     }
-                    if(sibling.recordsNumber < 2*BTreeNode.D)
-                        return new Pair<>(sibling, parent.records.get(i - 1));
 
                     sibling = bTree.getNode(parent.records.get(i + 1).getChildPageAddress());
                     if(sibling.recordsNumber < 2*BTreeNode.D)
