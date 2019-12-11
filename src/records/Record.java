@@ -1,5 +1,6 @@
 package records;
 
+import java.nio.ByteBuffer;
 import java.util.Random;
 
 public class Record implements Comparable<Record>{
@@ -20,6 +21,17 @@ public class Record implements Comparable<Record>{
         probabilityOfUnion = pAB;
     }
 
+    public Record(byte[] data){
+        int iter = 0;
+        index = ByteBuffer.wrap(data).getInt(iter);
+        iter += Integer.BYTES;
+        probabilityOfA = ByteBuffer.wrap(data).getDouble(iter);
+        iter += Double.BYTES;
+        probabilityOfB = ByteBuffer.wrap(data).getDouble(iter);
+        iter += Double.BYTES;
+        probabilityOfUnion = ByteBuffer.wrap(data).getDouble(iter);
+    }
+
     public double getProbabilityOfA() {
         return probabilityOfA;
     }
@@ -32,6 +44,10 @@ public class Record implements Comparable<Record>{
         return probabilityOfUnion;
     }
 
+    public int getIndex() {
+        return index;
+    }
+
     @Override
     public int compareTo(Record record) {
         if(record == null)
@@ -41,12 +57,22 @@ public class Record implements Comparable<Record>{
 
     @Override
     public String toString(){
-        return Integer.toUnsignedString(index) + " " + probabilityOfA + " " + probabilityOfB + " " + probabilityOfUnion;
+        return index + " " + probabilityOfA + " " + probabilityOfB + " " + probabilityOfUnion;
+    }
+
+    public byte[] toByteArray(){
+        byte[] data = new byte[getByteSize()];
+        ByteBuffer.wrap(data).putInt(index).putDouble(probabilityOfA).putDouble(probabilityOfB).putDouble(probabilityOfUnion);
+        return data;
+    }
+
+    public static int getByteSize(){
+        return Integer.BYTES + 3*Double.BYTES;
     }
 
     private void generateRandomProbs(){
         Random random = new Random();
-        index = random.nextInt();
+        index = random.nextInt(1000);
         do{
             probabilityOfA = random.nextDouble();
             probabilityOfB = random.nextDouble();

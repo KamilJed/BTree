@@ -1,43 +1,57 @@
 import database.DataBase;
-import database.indexes.btree.BTreeIndex;
-import database.indexes.btree.BTreeRecord;
+import records.Record;
 
 import java.io.IOException;
-import java.util.Random;
 import java.util.Scanner;
 
 public class mainClass {
 
     public static void main(String[] args) {
         try{
-            BTreeIndex index = new BTreeIndex("index");
-            for(int i = 0; i < 25; i++){
-                Random r = new Random();
-                index.insertRecord(r.nextInt(1000), 10);
-            }
+            DataBase db = new DataBase("database");
+//            for(int i = 0; i < 25; i++){
+//                db.addToDataBase(new Record());
+//            }
             while(true){
                 Scanner scanner = new Scanner(System.in);
                 String command = scanner.nextLine();
                 int id, newId;
+                double pA, pB, pUnion;
                 switch (command.charAt(0)){
                     case 'a':
                         id = Integer.parseInt(command.split(" ")[1]);
-                        index.insertRecord(id, 9);
+                        pA = Double.parseDouble(command.split(" ")[2]);
+                        pB = Double.parseDouble(command.split(" ")[3]);
+                        pUnion = Double.parseDouble(command.split(" ")[4]);
+                        if(db.addToDataBase(new Record(id, pA, pB, pUnion)))
+                            System.out.println("Record added successfully");
+                        else
+                            System.out.println("Record already in database");
+                        break;
+                    case 'g':
+                        id = Integer.parseInt(command.split(" ")[1]);
+                        Record r = db.getRecord(id);
+                        if(r != null)
+                            System.out.println(r);
+                        else
+                            System.out.println("No such record in database");
                         break;
                     case 'd':
                         id = Integer.parseInt(command.split(" ")[1]);
-                        index.deleteRecord(id);
+                        if(db.deleteRecord(id))
+                            System.out.println("Record deleted");
+                        else
+                            System.out.println("No such record in database");
                         break;
                     case 'u':
                         id = Integer.parseInt(command.split(" ")[1]);
                         newId = Integer.parseInt(command.split(" ")[2]);
-                        index.updateRecord(id, newId);
                         break;
                     case 'p':
-                        index.print();
+                        db.printIndex();
                         break;
                     case 's':
-                        index.printSorted();
+                        db.printSortedIndex();
                         break;
                 }
             }

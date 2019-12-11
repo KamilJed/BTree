@@ -326,6 +326,7 @@ public class BTreeNode {
         for(int i = 0; i < 2*BTreeNode.D; i++)
             records.add(new BTreeRecord(-1, -1, -1));
         bTree.saveNode(this);
+        bTree.addFreeAddress(selfAddress);
     }
 
     private Pair<BTreeNode, BTreeRecord> getFreeSibling(int mode){

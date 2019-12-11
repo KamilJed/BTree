@@ -8,6 +8,7 @@ import java.io.RandomAccessFile;
 public class BTreeIndex {
     private File indexFile;
     private BTreeNode root = null;
+    private File freeSpaceFile;
 
     public BTreeIndex(String indexPath) throws IOException{
         indexFile = new File(indexPath);
@@ -17,11 +18,20 @@ public class BTreeIndex {
         accessFile.seek(0);
         accessFile.writeInt(4);
         accessFile.write(new BTreeNode(this,0, 0, 4,0, new byte[0]).toByteArray());
+        accessFile.close();
         root = getRoot();
+        freeSpaceFile = new File(indexPath + "indexfree");
+        if(!freeSpaceFile.createNewFile())
+            throw new IOException("ERROR! Couldn't create free space file for index");
+        accessFile = new RandomAccessFile(freeSpaceFile, "rw");
+        accessFile.seek(0);
+        accessFile.writeInt(0);
+        accessFile.close();
     }
 
-    public BTreeIndex(File indexFile) throws IOException, FileNotFoundException{
+    public BTreeIndex(File indexFile, File freeSpaceFile) throws IOException, FileNotFoundException{
         this.indexFile = indexFile;
+        this.freeSpaceFile = freeSpaceFile;
         try{
             root = getRoot();
         }
@@ -85,14 +95,46 @@ public class BTreeIndex {
 
     public int getFreeAddress(){
         try{
-            RandomAccessFile accessFile = new RandomAccessFile(indexFile, "r");
+            int freeAddress;
+            RandomAccessFile accessFile = new RandomAccessFile(freeSpaceFile, "rw");
+            accessFile.seek(0);
+            int freeRecords = accessFile.readInt();
+            if(freeRecords > 0) {
+                accessFile.seek(freeRecords * Integer.BYTES);
+                freeAddress = accessFile.readInt();
+                accessFile.seek(0);
+                freeRecords--;
+                accessFile.writeInt(freeRecords);
+                accessFile.close();
+                return freeAddress;
+            }
+
+            accessFile = new RandomAccessFile(indexFile, "r");
             long len = accessFile.length();
+            accessFile.close();
             return (int)len;
         }
         catch (IOException e){
             System.out.println("ERROR! Couldn't get free space");
         }
         return -1;
+    }
+
+    public void addFreeAddress(int address){
+        try{
+            RandomAccessFile accessFile = new RandomAccessFile(freeSpaceFile, "rw");
+            accessFile.seek(0);
+            int freeRecords = accessFile.readInt();
+            accessFile.seek(freeRecords*Integer.BYTES + Integer.BYTES);
+            accessFile.writeInt(address);
+            freeRecords++;
+            accessFile.seek(0);
+            accessFile.writeInt(freeRecords);
+            accessFile.close();
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
     }
 
     public BTreeNode getNode(int address) throws FileNotFoundException, IOException{
