@@ -5,18 +5,22 @@ import database.indexes.btree.BTreeRecord;
 import records.Record;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.ArrayList;
 
 public class DataBase {
     private File database;
     private BTreeIndex index;
     private File freeSpaceFile;
 
-    public DataBase(File db, BTreeIndex index, File freeSpaceFile){
+    public DataBase(File db) throws IOException{
         database = db;
-        this.index = index;
-        this.freeSpaceFile = freeSpaceFile;
+        index = new BTreeIndex(new File(db.getName() + "index"));
+        freeSpaceFile = new File(db.getName() + "free");
+        if(!freeSpaceFile.exists())
+            throw new FileNotFoundException("Free space file does not exist. Database corrupted");
     }
 
     public DataBase(String dbPath) throws IOException{
@@ -52,6 +56,10 @@ public class DataBase {
         BTreeRecord record = index.searchRecord(id);
         if(record == null)
             return null;
+        return getRecord(record);
+    }
+
+    public Record getRecord(BTreeRecord record){
         try{
             RandomAccessFile accessFile = new RandomAccessFile(database, "r");
             accessFile.seek(record.getRecordAddress());
@@ -89,12 +97,47 @@ public class DataBase {
         }
     }
 
+    public boolean updateRecord(int id, int newId, double pA, double pB, double pUnion){
+        if(!deleteRecord(id))
+            return false;
+        return addToDataBase(new Record(newId, pA, pB, pUnion));
+    }
+
     public void printIndex(){
         index.print();
     }
 
-    public void printSortedIndex(){
-        index.printSorted();
+    public void printRawDatabase(){
+        try{
+            RandomAccessFile accessFile = new RandomAccessFile(database, "r");
+            accessFile.seek(0);
+            byte[] data = new byte[Record.getByteSize()];
+            while(accessFile.read(data) != -1)
+                System.out.println(new Record(data));
+
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    public void printRawIndex(){
+        index.printRaw();
+    }
+
+    public void printSorted(){
+        ArrayList<BTreeRecord> records = index.getSorted();
+        for(BTreeRecord record : records)
+            System.out.println(getRecord(record));
+    }
+
+    public int getPageAccessesNumber(){
+        return index.getPageAccessCounter();
+    }
+
+    @Override
+    public String toString() {
+        return database.getName();
     }
 
     private long getFreeSpace(){

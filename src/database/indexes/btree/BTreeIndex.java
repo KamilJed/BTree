@@ -4,11 +4,13 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.ArrayList;
 
 public class BTreeIndex {
     private File indexFile;
     private BTreeNode root = null;
     private File freeSpaceFile;
+    private int pageAccessCounter;
 
     public BTreeIndex(String indexPath) throws IOException{
         indexFile = new File(indexPath);
@@ -20,7 +22,8 @@ public class BTreeIndex {
         accessFile.write(new BTreeNode(this,0, 0, 4,0, new byte[0]).toByteArray());
         accessFile.close();
         root = getRoot();
-        freeSpaceFile = new File(indexPath + "indexfree");
+        pageAccessCounter = 0;
+        freeSpaceFile = new File(indexPath + "free");
         if(!freeSpaceFile.createNewFile())
             throw new IOException("ERROR! Couldn't create free space file for index");
         accessFile = new RandomAccessFile(freeSpaceFile, "rw");
@@ -29,11 +32,14 @@ public class BTreeIndex {
         accessFile.close();
     }
 
-    public BTreeIndex(File indexFile, File freeSpaceFile) throws IOException, FileNotFoundException{
+    public BTreeIndex(File indexFile) throws IOException, FileNotFoundException{
         this.indexFile = indexFile;
-        this.freeSpaceFile = freeSpaceFile;
+        freeSpaceFile = new File(indexFile.getName() + "free");
+        if(!freeSpaceFile.exists())
+            throw new FileNotFoundException("Free space file does not exist. Index corrupted");
         try{
             root = getRoot();
+            pageAccessCounter = 0;
         }
         catch (FileNotFoundException e){
             System.out.println("ERROR! Index does not exist");
@@ -84,6 +90,7 @@ public class BTreeIndex {
             if(node.getParentPageAddress() == 0){
                 updateRootAddress(node.getSelfAddress());
             }
+            pageAccessCounter++;
         }
         catch (FileNotFoundException e){
             System.out.println("ERROR! Couldn't get index file");
@@ -146,6 +153,7 @@ public class BTreeIndex {
         byte[] records = new byte[recordsNumber*BTreeRecord.getByteSize()];
         accessFile.read(records);
         accessFile.close();
+        pageAccessCounter++;
         return new BTreeNode(this, firstChildAddress, parentPageAddress, address, recordsNumber, records);
     }
 
@@ -163,33 +171,62 @@ public class BTreeIndex {
         }
     }
 
-    public void printSorted(){
+    public void printRaw(){
+        try{
+            RandomAccessFile accessFile = new RandomAccessFile(indexFile, "r");
+            accessFile.seek(Integer.BYTES);
+            while(accessFile.getFilePointer() != accessFile.length()){
+                int firstChildAddress = accessFile.readInt();
+                int parentPageAddress = accessFile.readInt();
+                int recordsNumber = accessFile.readInt();
+                byte[] records = new byte[2*BTreeNode.D*BTreeRecord.getByteSize()];
+                accessFile.read(records);
+                System.out.println(new BTreeNode(this, firstChildAddress, parentPageAddress, (int)accessFile.getFilePointer(), recordsNumber, records));
+            }
+            accessFile.close();
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
+
+    }
+
+    public ArrayList<BTreeRecord> getSorted(){
         try{
             RandomAccessFile accessFile = new RandomAccessFile(indexFile, "r");
             accessFile.seek(0);
             int rootAddress = accessFile.readInt();
             accessFile.close();
-            printSortedTree(rootAddress);
-            System.out.println("--------------------------");
+            return getSortedTree(rootAddress);
         }
         catch (IOException e){
             e.printStackTrace();
+            return null;
         }
     }
 
-    private void printSortedTree(int address){
+    public int getPageAccessCounter() {
+        int counter = pageAccessCounter;
+        pageAccessCounter = 0;
+        return counter;
+    }
+
+    private ArrayList<BTreeRecord> getSortedTree(int address){
         try{
+            ArrayList<BTreeRecord> recordList = new ArrayList<>();
             BTreeNode node = getNode(address);
             if(node.getFirstChildAddress() != 0)
-                printSortedTree(node.getFirstChildAddress());
+                recordList.addAll(getSortedTree(node.getFirstChildAddress()));
             for(BTreeRecord record : node.getRecords()){
-                System.out.println(record);
+                recordList.add(record);
                 if(record.getChildPageAddress() != 0)
-                    printSortedTree(record.getChildPageAddress());
+                    recordList.addAll(getSortedTree(record.getChildPageAddress()));
             }
+            return recordList;
         }
         catch (IOException e){
             e.printStackTrace();
+            return null;
         }
     }
 
@@ -235,7 +272,8 @@ public class BTreeIndex {
         accessFile.seek(0);
         int rootAddress = accessFile.readInt();
         accessFile.close();
-        return getNode(rootAddress);
+        BTreeNode root = getNode(rootAddress);
+        return root;
     }
 
     private BTreeNode deepSearchAddress(int index, int address){
