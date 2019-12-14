@@ -1,5 +1,4 @@
 import database.DataBase;
-import javafx.util.Pair;
 import records.Record;
 
 import java.io.BufferedReader;
@@ -12,6 +11,7 @@ public class mainClass {
     private static DataBase db;
 
     public static void main(String[] args) {
+        printHelp();
         Scanner scanner = new Scanner(System.in);
         while(true){
             if(db == null)
@@ -186,6 +186,9 @@ public class mainClass {
                 }
                 executeCommandsFromFile(commandsFile);
                 break;
+            case 'h':
+                printHelp();
+                break;
         }
         return true;
     }
@@ -201,4 +204,19 @@ public class mainClass {
         }
     }
 
+    public static void printHelp(){
+        System.out.println("i [name] - create a database");
+        System.out.println("o [name] - open a database");
+        System.out.println("a [index pA pB pUnion] - add record to database");
+        System.out.println("d [index] - delete record from database");
+        System.out.println("u [index newIndex pA pB pUnion] - update record in database");
+        System.out.println("g [index] - get record from database");
+        System.out.println("p - print index as b tree");
+        System.out.println("s - print sorted records");
+        System.out.println("r - print raw database file");
+        System.out.println("t - print raw index file");
+        System.out.println("f [fileName] - execute operations from file");
+        System.out.println("h - print this message");
+        System.out.println("q - quit");
+    }
 }
