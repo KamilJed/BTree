@@ -131,6 +131,10 @@ public class DataBase {
             System.out.println(getRecord(record));
     }
 
+    public double getMemoryUsage(){
+        return index.getMemoryUsasge();
+    }
+
     public int getPageAccessesNumber(){
         return index.getPageAccessCounter();
     }

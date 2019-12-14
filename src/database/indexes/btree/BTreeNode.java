@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 public class BTreeNode {
-    public static final int D = 2;
+    public static final int D = 10;
     private static final int SIBLING_INSERT = 0;
     private static final int SIBLING_DELETE = 1;
     private static final int SIBLING_MERGE = 2;
@@ -134,6 +134,7 @@ public class BTreeNode {
             builder.append(record);
             builder.append(".");
         }
+        builder.append(" (" + selfAddress + ") " + "(" + parentPageAddress + ")");
         return builder.toString();
     }
 
@@ -208,6 +209,9 @@ public class BTreeNode {
                 parent.recordsNumber = parent.records.size();
                 siblingAndRecord.getKey().recordsNumber = siblingAndRecord.getKey().records.size();
                 this.recordsNumber = this.records.size();
+                updateChilds();
+                siblingAndRecord.getKey().updateChilds();
+                parent.updateChilds();
                 bTree.saveNode(this);
                 bTree.saveNode(siblingAndRecord.getKey());
                 bTree.saveNode(parent);
@@ -245,13 +249,16 @@ public class BTreeNode {
             if(parent.parentPageAddress == 0 && parent.recordsNumber == 0){
                 smaller.parentPageAddress = 0;
                 smaller.recordsNumber = smaller.records.size();
+                smaller.updateChilds();
                 bTree.saveNode(smaller);
                 parent.deletePage();
             }
             else{
                 smaller.recordsNumber = smaller.records.size();
+                smaller.updateChilds();
                 bTree.saveNode(smaller);
                 parent.recordsNumber = parent.records.size();
+                parent.updateChilds();
                 parent.afterDel();
             }
         }

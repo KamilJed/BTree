@@ -72,7 +72,7 @@ public class Record implements Comparable<Record>{
 
     private void generateRandomProbs(){
         Random random = new Random();
-        index = random.nextInt(1000);
+        index = random.nextInt() & Integer.MAX_VALUE;
         do{
             probabilityOfA = random.nextDouble();
             probabilityOfB = random.nextDouble();

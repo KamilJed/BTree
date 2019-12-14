@@ -188,7 +188,6 @@ public class BTreeIndex {
         catch (IOException e){
             e.printStackTrace();
         }
-
     }
 
     public ArrayList<BTreeRecord> getSorted(){
@@ -202,6 +201,29 @@ public class BTreeIndex {
         catch (IOException e){
             e.printStackTrace();
             return null;
+        }
+    }
+
+    public double getMemoryUsasge(){
+        try{
+            RandomAccessFile accessFile = new RandomAccessFile(indexFile, "r");
+            accessFile.seek(Integer.BYTES);
+            long r = 0, p = 0;
+            while(accessFile.getFilePointer() != accessFile.length()){
+                int firstChildAddress = accessFile.readInt();
+                int parentPageAddress = accessFile.readInt();
+                int recordsNumber = accessFile.readInt();
+                r += recordsNumber;
+                p++;
+                byte[] records = new byte[2*BTreeNode.D*BTreeRecord.getByteSize()];
+                accessFile.read(records);
+            }
+            accessFile.close();
+            return (double)r/(double)(p*2*BTreeNode.D);
+        }
+        catch (IOException e){
+            e.printStackTrace();
+            return 0;
         }
     }
 

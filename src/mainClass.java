@@ -1,15 +1,14 @@
 import database.DataBase;
 import records.Record;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Random;
 import java.util.Scanner;
 
 public class mainClass {
     private static DataBase db;
-
+    
     public static void main(String[] args) {
         printHelp();
         Scanner scanner = new Scanner(System.in);
@@ -48,11 +47,12 @@ public class mainClass {
                 pA = Double.parseDouble(command.split(" ")[2]);
                 pB = Double.parseDouble(command.split(" ")[3]);
                 pUnion = Double.parseDouble(command.split(" ")[4]);
-                if(db.addToDataBase(new Record(id, pA, pB, pUnion)))
-                    System.out.println("Record added successfully");
-                else
-                    System.out.println("Record already in database");
-                System.out.println(getPageAccessesNumber(db));
+                db.addToDataBase(new Record(id, pA, pB, pUnion));
+//                if(db.addToDataBase(new Record(id, pA, pB, pUnion)))
+//                    System.out.println("Record added successfully");
+//                else
+//                    System.out.println("Record already in database");
+//                System.out.println(getPageAccessesNumber(db));
                 break;
             case 'g':
                 if(db == null){
@@ -82,7 +82,7 @@ public class mainClass {
                 }
                 id = Integer.parseInt(command.split(" ")[1]);
                 if(db.deleteRecord(id))
-                    System.out.println("Record deleted");
+                    System.out.println("Record deleted " + id);
                 else
                     System.out.println("No such record in database");
                 System.out.println(getPageAccessesNumber(db));
@@ -189,6 +189,23 @@ public class mainClass {
             case 'h':
                 printHelp();
                 break;
+            case 'e':
+                if(db == null){
+                    System.out.println("Choose or create a database first");
+                    break;
+                }
+                System.out.println("Memory usage - " + db.getMemoryUsage() + "%");
+                break;
+            case 'w':
+                if(command.split(" ").length != 4){
+                    System.out.println("Unrecognised parameters");
+                    break;
+                }
+                dbName = command.split(" ")[1];
+                id = Integer.parseInt(command.split(" ")[2]);
+                pA = Double.parseDouble(command.split(" ")[3]);
+                genTestFile(dbName, id, pA);
+                break;
         }
         return true;
     }
@@ -218,5 +235,26 @@ public class mainClass {
         System.out.println("f [fileName] - execute operations from file");
         System.out.println("h - print this message");
         System.out.println("q - quit");
+    }
+
+    public static void genTestFile(String fileName, int numOfRecords, double alpha){
+        try(BufferedWriter writer = new BufferedWriter(new FileWriter(fileName))){
+            ArrayList<Integer> indexes = new ArrayList<>();
+            Random random = new Random();
+            for(int i = 0; i < numOfRecords; i++){
+                Record r = new Record();
+                writer.write("a " + r.toString());
+                writer.newLine();
+                if(random.nextDouble() < alpha)
+                    indexes.add(r.getIndex());
+            }
+            for(int id : indexes){
+                writer.write("d " + id);
+                writer.newLine();
+            }
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
     }
 }
