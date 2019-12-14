@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.Random;
 import java.util.Scanner;
 
-public class mainClass {
+public class appMain {
     private static DataBase db;
     
     public static void main(String[] args) {
@@ -48,11 +48,11 @@ public class mainClass {
                 pB = Double.parseDouble(command.split(" ")[3]);
                 pUnion = Double.parseDouble(command.split(" ")[4]);
                 db.addToDataBase(new Record(id, pA, pB, pUnion));
-//                if(db.addToDataBase(new Record(id, pA, pB, pUnion)))
-//                    System.out.println("Record added successfully");
-//                else
-//                    System.out.println("Record already in database");
-//                System.out.println(getPageAccessesNumber(db));
+                if(db.addToDataBase(new Record(id, pA, pB, pUnion)))
+                    System.out.println("Record added successfully");
+                else
+                    System.out.println("Record already in database");
+                System.out.println(getPageAccessesNumber(db));
                 break;
             case 'g':
                 if(db == null){

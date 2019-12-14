@@ -1,6 +1,7 @@
 package database;
 
 import database.indexes.btree.BTreeIndex;
+import database.indexes.btree.BTreeNode;
 import database.indexes.btree.BTreeRecord;
 import records.Record;
 
@@ -100,7 +101,9 @@ public class DataBase {
     public boolean updateRecord(int id, int newId, double pA, double pB, double pUnion){
         if(!deleteRecord(id))
             return false;
-        return addToDataBase(new Record(newId, pA, pB, pUnion));
+        if(addToDataBase(new Record(newId, pA, pB, pUnion)))
+            return true;
+        return addToDataBase(new Record(id, pA, pB, pUnion));
     }
 
     public void printIndex(){

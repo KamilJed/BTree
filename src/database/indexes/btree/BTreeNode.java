@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 public class BTreeNode {
-    public static final int D = 10;
+    public static final int D = 2;
     private static final int SIBLING_INSERT = 0;
     private static final int SIBLING_DELETE = 1;
     private static final int SIBLING_MERGE = 2;
